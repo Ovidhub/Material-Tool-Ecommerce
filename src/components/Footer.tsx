@@ -34,7 +34,7 @@ export default function Footer() {
         <div>
           <h4 className="font-black text-white text-[11px] uppercase tracking-wider mb-4 pb-2 border-b border-neutral-800">Quick Links</h4>
           <ul className="space-y-2 text-xs">
-            {[{l:"About Us",t:"/about"},{l:"Shop All",t:"/shop"},{l:"Top Deals",t:"/shop?badge=Sale"},{l:"Contact Us",t:"/contact"},{l:"My Account",t:"/login"},{l:"Admin Panel",t:"/admin"},{l:"Shipping Policy",t:"#"},{l:"Returns",t:"#"}].map((i)=>(<li key={i.l}><Link to={i.t} className="hover:text-red-500 transition">{i.l}</Link></li>))}
+            {[{l:"About Us",t:"/about"},{l:"Shop All",t:"/shop"},{l:"Top Deals",t:"/shop?badge=Sale"},{l:"Contact Us",t:"/contact"},{l:"My Account",t:"/login"},{l:"Shipping Policy",t:"#"},{l:"Returns",t:"#"}].map((i)=>(<li key={i.l}><Link to={i.t} className="hover:text-red-500 transition">{i.l}</Link></li>))}
           </ul>
         </div>
         <div>
