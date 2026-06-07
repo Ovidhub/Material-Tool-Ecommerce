@@ -11,9 +11,12 @@ use App\Http\Controllers\Api\PaymentMethodController;
 use App\Http\Controllers\Api\SiteContentController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\WishlistController;
+use App\Http\Controllers\Api\PasswordResetController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/forgot-password', [PasswordResetController::class, 'forgot']);
+Route::post('/reset-password', [PasswordResetController::class, 'reset']);
 
 Route::get('/payment-methods', [PaymentMethodController::class, 'public']);
 Route::get('/site-content', [SiteContentController::class, 'show']);

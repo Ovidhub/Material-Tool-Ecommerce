@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useStore } from "../context/StoreContext";
 
 export default function Login() {
@@ -49,6 +49,11 @@ export default function Login() {
               {submitting ? "Please wait…" : mode === "login" ? "Sign In" : "Create Account"}
             </button>
           </form>
+          {mode === "login" && (
+            <div className="mt-3 text-center">
+              <Link to="/forgot-password" className="text-xs font-semibold text-red-600 hover:text-red-700">Forgot your password?</Link>
+            </div>
+          )}
           <div className="mt-4 bg-neutral-50 border border-neutral-200 rounded-sm p-3 text-[11px] text-neutral-500"><b className="text-neutral-700">Demo:</b> Use <code className="text-red-600">super@toolrack.com</code> for super admin, <code className="text-red-600">admin@toolrack.com</code> for admin.</div>
         </div>
       </div>

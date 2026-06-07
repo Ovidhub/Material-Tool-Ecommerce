@@ -11,6 +11,8 @@ import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Account from "./pages/Account";
 import Admin from "./pages/Admin";
 import About from "./pages/About";
@@ -49,6 +51,8 @@ function Layout() {
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/order-success" element={<OrderSuccess />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/account" element={<Account />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/about" element={<About />} />
