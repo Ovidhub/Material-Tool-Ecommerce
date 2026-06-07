@@ -18,7 +18,7 @@ export default function Account() {
         <div className="flex items-center gap-4 mb-8 pb-6 border-b border-neutral-200">
           <div className="w-16 h-16 rounded bg-red-600 grid place-items-center text-white text-2xl font-black">{state.user.name[0]}</div>
           <div className="flex-1"><h1 className="text-2xl font-black text-neutral-900">Hi, {state.user.name}!</h1><p className="text-sm text-neutral-500">{state.user.email} · {state.user.role === "admin" ? "Admin" : "Customer"}</p></div>
-          <button onClick={logout} className="px-4 py-2 border border-neutral-300 text-xs font-bold rounded-sm hover:bg-neutral-100 flex items-center gap-1.5"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>SIGN OUT</button>
+          <button onClick={() => { logout(); }} className="px-4 py-2 border border-neutral-300 text-xs font-bold rounded-sm hover:bg-neutral-100 flex items-center gap-1.5"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>SIGN OUT</button>
         </div>
         <div className="grid md:grid-cols-3 gap-4 mb-10">
           {kpis.map((s, i) => (<div key={i} className={`${s.bg} text-white rounded-sm p-5`}><s.Icon className="w-6 h-6 mb-2 opacity-80" /><div className="text-2xl font-black">{s.value}</div><div className="text-xs opacity-80">{s.label}</div></div>))}

@@ -28,6 +28,11 @@ export default function Shop() {
 
   function setParam(k: string, v: string) { const p = new URLSearchParams(params); if (v) p.set(k, v); else p.delete(k); setParams(p); }
   function clearFilters() { setParams({}); setPriceRange([0, 500]); }
+
+  if (state.loading && state.products.length === 0) {
+    return <div className="max-w-7xl mx-auto px-4 py-24 text-center text-neutral-500">Loading products…</div>;
+  }
+
   const activeFilters = [category, brand, badge, q].filter(Boolean).length;
   const currentCat = categories.find((c) => c.id === category);
   const CatIcon = currentCat ? categoryIconMap[currentCat.id] : null;

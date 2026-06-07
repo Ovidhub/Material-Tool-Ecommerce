@@ -46,6 +46,10 @@ export default function Home() {
   const trustIcons = [GlobeIcon, DollarIcon, TagIcon, HeadphonesIcon];
   const trustItems = site.trustItems.map((item, index) => ({ ...item, Icon: trustIcons[index] || HeadphonesIcon }));
 
+  if (state.loading && state.products.length === 0) {
+    return <div className="max-w-7xl mx-auto px-4 py-24 text-center text-neutral-500">Loading products…</div>;
+  }
+
   return (
     <div className="bg-neutral-100">
       {/* HERO */}

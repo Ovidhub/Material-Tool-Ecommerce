@@ -25,12 +25,27 @@ export default function Checkout() {
 
   function update<K extends keyof typeof form>(k: K, v: (typeof form)[K]) { setForm((f) => ({ ...f, [k]: v })); }
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (step < 3) { setStep((step + 1) as 1 | 2 | 3); return; }
     const paymentMethod = enabledMethods.find((m) => m.id === selectedMethodId)?.name || "Manual Payment";
-    placeOrder({ items: state.cart, total, paymentMethod });
-    nav("/order-success");
+    try {
+      await placeOrder({
+        items: state.cart.map((i) => ({ productId: i.productId, qty: i.qty })),
+        paymentMethod,
+        email: form.email,
+        phone: form.phone,
+        firstName: form.firstName,
+        lastName: form.lastName,
+        address: form.address,
+        city: form.city,
+        state: form.state,
+        zip: form.zip,
+      });
+      nav("/order-success");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Could not place order. Please try again.");
+    }
   }
 
   const inputCls = "w-full px-3 py-2.5 border border-neutral-300 rounded-sm text-sm focus:outline-none focus:border-red-500 bg-white";

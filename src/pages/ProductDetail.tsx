@@ -12,6 +12,9 @@ export default function ProductDetail() {
   const [tab, setTab] = useState<"desc" | "specs" | "reviews">("desc");
 
   if (!product) {
+    if (state.loading) {
+      return <div className="max-w-7xl mx-auto px-4 py-24 text-center text-neutral-500">Loading…</div>;
+    }
     return (
       <div className="max-w-7xl mx-auto px-4 py-24 text-center">
         <div className="text-6xl mb-4">🔧</div>

@@ -155,7 +155,9 @@ export default function Admin() {
     deletePaymentMethod,
     togglePaymentMethod,
     updateSiteContent,
+    toast,
   } = useStore();
+  const errMsg = (err: unknown) => (err instanceof Error ? err.message : "Something went wrong");
   if (!state.user || !["admin", "super_admin"].includes(state.user.role)) return <Navigate to="/login" replace />;
 
   const [tab, setTab] = useState<"dashboard" | "products" | "categories" | "orders" | "payments" | "content" | "customers">("dashboard");
@@ -205,21 +207,29 @@ export default function Admin() {
     setFormOpen(true);
   }
 
-  function submitProduct(e: React.FormEvent) {
+  async function submitProduct(e: React.FormEvent) {
     e.preventDefault();
     const payload = productPayload(form);
-    if (editing) {
-      updateProduct({ ...editing, ...payload });
-    } else {
-      addProduct(payload);
+    try {
+      if (editing) {
+        await updateProduct({ ...editing, ...payload });
+      } else {
+        await addProduct(payload);
+      }
+      setFormOpen(false);
+      setEditing(null);
+      setForm(blankForm);
+    } catch (err) {
+      toast(errMsg(err));
     }
-    setFormOpen(false);
-    setEditing(null);
-    setForm(blankForm);
   }
 
-  function duplicateProduct(product: Product) {
-    addProduct({ ...product, name: `${product.name} Copy`, sku: `${product.sku}-CP`, slug: undefined, reviews: 0 });
+  async function duplicateProduct(product: Product) {
+    try {
+      await addProduct({ ...product, name: `${product.name} Copy`, sku: `${product.sku}-CP`, slug: undefined, reviews: 0 });
+    } catch (err) {
+      toast(errMsg(err));
+    }
   }
 
   const filteredProducts = products.filter((p) => {
@@ -240,18 +250,22 @@ export default function Admin() {
     setProductPage(1);
   }
 
-  function submitCategory(e: React.FormEvent) {
+  async function submitCategory(e: React.FormEvent) {
     e.preventDefault();
     const name = categoryName.trim();
     if (!name) return;
-    if (editingCategoryId) {
-      const existing = categories.find((c) => c.id === editingCategoryId);
-      if (existing) updateCategory({ ...existing, name });
-    } else {
-      addCategory(name);
+    try {
+      if (editingCategoryId) {
+        const existing = categories.find((c) => c.id === editingCategoryId);
+        if (existing) await updateCategory({ ...existing, name });
+      } else {
+        await addCategory(name);
+      }
+      setCategoryName("");
+      setEditingCategoryId(null);
+    } catch (err) {
+      toast(errMsg(err));
     }
-    setCategoryName("");
-    setEditingCategoryId(null);
   }
 
   function startEditCategory(id: string, name: string) {
@@ -278,7 +292,7 @@ export default function Admin() {
     setPaymentFormOpen(true);
   }
 
-  function submitPaymentMethod(e: React.FormEvent) {
+  async function submitPaymentMethod(e: React.FormEvent) {
     e.preventDefault();
     const payload = {
       type: paymentForm.type,
@@ -293,11 +307,15 @@ export default function Admin() {
       network: paymentForm.network.trim() || undefined,
       instructions: paymentForm.instructions.trim() || undefined,
     };
-    if (editingPayment) updatePaymentMethod({ ...editingPayment, ...payload });
-    else addPaymentMethod(payload);
-    setPaymentFormOpen(false);
-    setEditingPayment(null);
-    setPaymentForm(blankPaymentForm);
+    try {
+      if (editingPayment) await updatePaymentMethod({ ...editingPayment, ...payload });
+      else await addPaymentMethod(payload);
+      setPaymentFormOpen(false);
+      setEditingPayment(null);
+      setPaymentForm(blankPaymentForm);
+    } catch (err) {
+      toast(errMsg(err));
+    }
   }
 
   function updateHeroSlide(index: number, patch: Partial<HeroSlide>) {
@@ -398,9 +416,13 @@ export default function Admin() {
     }));
   }
 
-  function saveContent(e: React.FormEvent) {
+  async function saveContent(e: React.FormEvent) {
     e.preventDefault();
-    updateSiteContent(contentForm);
+    try {
+      await updateSiteContent(contentForm);
+    } catch (err) {
+      toast(errMsg(err));
+    }
   }
 
   const kpis = [
@@ -574,7 +596,7 @@ export default function Admin() {
                           <div className="flex justify-end gap-2">
                             <button onClick={() => openEditForm(p)} className="text-xs font-bold text-blue-600 hover:underline">Edit</button>
                             <button onClick={() => duplicateProduct(p)} className="text-xs font-bold text-neutral-600 hover:underline">Duplicate</button>
-                            <button onClick={() => confirm(`Delete ${p.name}?`) && deleteProduct(p.id)} className="text-xs font-bold text-red-600 hover:underline">Delete</button>
+                            <button onClick={async () => { if (confirm(`Delete ${p.name}?`)) { try { await deleteProduct(p.id); } catch (err) { toast(errMsg(err)); } } }} className="text-xs font-bold text-red-600 hover:underline">Delete</button>
                           </div>
                         </td>
                       </tr>
@@ -626,7 +648,7 @@ export default function Admin() {
                           <td className="px-5 py-3 text-right">
                             <div className="flex justify-end gap-2">
                               <button onClick={() => startEditCategory(c.id, c.name)} className="text-xs font-bold text-blue-600 hover:underline">Edit</button>
-                              <button onClick={() => count > 0 ? alert("Move or delete products in this category first.") : confirm(`Delete ${c.name}?`) && deleteCategory(c.id)} className="text-xs font-bold text-red-600 hover:underline">Delete</button>
+                              <button onClick={async () => { if (count > 0) { alert("Move or delete products in this category first."); return; } if (confirm(`Delete ${c.name}?`)) { try { await deleteCategory(c.id); } catch (err) { toast(errMsg(err)); } } }} className="text-xs font-bold text-red-600 hover:underline">Delete</button>
                             </div>
                           </td>
                         </tr>
@@ -653,7 +675,7 @@ export default function Admin() {
                         <td className="px-5 py-3 font-semibold">{o.id}</td><td className="px-5 py-3 text-neutral-600">{new Date(o.date).toLocaleDateString()}</td><td className="px-5 py-3 text-neutral-600">{o.items.length || 3}</td><td className="px-5 py-3 font-bold">${o.total.toFixed(2)}</td>
                         <td className="px-5 py-3">
                           {isRealOrder ? (
-                            <select value={o.status} onChange={(e) => updateOrderStatus(o.id, e.target.value as typeof o.status)} className={`px-2.5 py-1 rounded-sm text-[10px] font-bold uppercase border-0 ${statusCls(o.status)}`}>
+                            <select value={o.status} onChange={async (e) => { try { await updateOrderStatus(o.id, e.target.value as typeof o.status); } catch (err) { toast(errMsg(err)); } }} className={`px-2.5 py-1 rounded-sm text-[10px] font-bold uppercase border-0 ${statusCls(o.status)}`}>
                               <option>Pending</option><option>Processing</option><option>Shipped</option><option>Delivered</option>
                             </select>
                           ) : <span className={`px-2.5 py-1 rounded-sm text-[10px] font-bold uppercase ${statusCls(o.status)}`}>{o.status}</span>}
@@ -753,7 +775,7 @@ export default function Admin() {
                       <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">{method.type} · {method.mode}</div>
                       <h4 className="font-black text-neutral-900">{method.name}</h4>
                     </div>
-                    <button onClick={() => togglePaymentMethod(method.id)} className={`px-2.5 py-1 rounded-sm text-[10px] font-bold uppercase ${method.enabled ? "bg-green-100 text-green-700" : "bg-neutral-100 text-neutral-500"}`}>
+                    <button onClick={async () => { try { await togglePaymentMethod(method.id); } catch (err) { toast(errMsg(err)); } }} className={`px-2.5 py-1 rounded-sm text-[10px] font-bold uppercase ${method.enabled ? "bg-green-100 text-green-700" : "bg-neutral-100 text-neutral-500"}`}>
                       {method.enabled ? "Enabled" : "Disabled"}
                     </button>
                   </div>
@@ -765,7 +787,7 @@ export default function Admin() {
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => openEditPaymentForm(method)} className="text-xs font-bold text-blue-600 hover:underline">Edit</button>
-                    <button onClick={() => confirm(`Delete ${method.name}?`) && deletePaymentMethod(method.id)} className="text-xs font-bold text-red-600 hover:underline">Delete</button>
+                    <button onClick={async () => { if (confirm(`Delete ${method.name}?`)) { try { await deletePaymentMethod(method.id); } catch (err) { toast(errMsg(err)); } } }} className="text-xs font-bold text-red-600 hover:underline">Delete</button>
                   </div>
                 </div>
               ))}
