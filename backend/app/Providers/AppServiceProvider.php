@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -20,9 +19,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Reset auth guard cache between requests (important for test isolation with Sanctum).
-        $this->app->terminating(function () {
-            Auth::forgetGuards();
-        });
+        //
     }
 }

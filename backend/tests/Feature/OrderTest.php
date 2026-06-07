@@ -46,6 +46,17 @@ it('places a manual (non-stripe) order, snapshots items, decrements stock', func
     expect($res->json('data.total'))->toBe(122.99);
 });
 
+it('rejects an order that exceeds available stock and writes nothing', function () {
+    $user = User::factory()->create();
+    $p = seedProduct(['stock' => 3]);
+    postJson('/api/orders', [
+        'items' => [['productId' => $p->id, 'qty' => 5]],
+        'paymentMethod' => 'Bank Transfer',
+    ], authHeader($user))->assertStatus(422);
+    expect(App\Models\Order::count())->toBe(0);
+    expect($p->fresh()->stock)->toBe(3);
+});
+
 it('rejects a stripe order whose intent did not succeed', function () {
     $this->mock(StripeService::class, function ($m) {
         $m->shouldReceive('intentSucceeded')->once()->with('pi_bad')->andReturn(false);

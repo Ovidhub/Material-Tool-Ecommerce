@@ -13,8 +13,7 @@ class OrderController extends Controller {
     public function __construct(private StripeService $stripe) {}
 
     public function store(Request $request) {
-        /** @var \App\Models\User $user */
-        $user = $request->user('sanctum');
+        $user = $request->user();
         $data = $request->validate([
             'items' => 'required|array|min:1',
             'items.*.productId' => 'required|integer',
@@ -36,8 +35,21 @@ class OrderController extends Controller {
         $totals = PaymentController::totalsFor($data['items']);
 
         $order = DB::transaction(function () use ($data, $totals, $user) {
+            // Lock the referenced products and validate availability before writing.
+            $productIds = collect($data['items'])->pluck('productId')->all();
+            $products = Product::whereIn('id', $productIds)->lockForUpdate()->get()->keyBy('id');
+            foreach ($data['items'] as $item) {
+                $product = $products->get($item['productId']);
+                if (! $product) {
+                    throw ValidationException::withMessages(['items' => ['One or more products are no longer available.']]);
+                }
+                if ($item['qty'] > $product->stock) {
+                    throw ValidationException::withMessages(['items' => ["Insufficient stock for {$product->name}."]]);
+                }
+            }
+
             $order = Order::create([
-                'id' => 'TF-'.random_int(100000, 999999),
+                'id' => $this->uniqueOrderId(),
                 'user_id' => $user->id,
                 'subtotal' => $totals['subtotal'],
                 'shipping' => $totals['shipping'],
@@ -52,8 +64,7 @@ class OrderController extends Controller {
                 'state' => $data['state'] ?? null, 'zip' => $data['zip'] ?? null,
             ]);
             foreach ($data['items'] as $item) {
-                $product = Product::find($item['productId']);
-                if (! $product) continue;
+                $product = $products->get($item['productId']);
                 $order->items()->create([
                     'product_id' => $product->id,
                     'name' => $product->name,
@@ -61,7 +72,7 @@ class OrderController extends Controller {
                     'image' => $product->image,
                     'qty' => $item['qty'],
                 ]);
-                $product->decrement('stock', min($item['qty'], $product->stock));
+                $product->decrement('stock', $item['qty']);
             }
             return $order;
         });
@@ -70,9 +81,12 @@ class OrderController extends Controller {
     }
 
     public function index(Request $request) {
-        /** @var \App\Models\User $user */
-        $user = $request->user('sanctum');
-        $orders = $user->orders()->with('items')->latest()->get();
+        $orders = $request->user()->orders()->with('items')->latest()->get();
         return OrderResource::collection($orders);
+    }
+
+    private function uniqueOrderId(): string {
+        do { $id = 'TF-'.random_int(100000, 999999); } while (Order::whereKey($id)->exists());
+        return $id;
     }
 }
