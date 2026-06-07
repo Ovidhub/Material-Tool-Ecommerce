@@ -1,7 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useStore } from "../context/StoreContext";
 import type { PaymentMethod } from "../context/StoreContext";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
+import StripeCardForm from "../components/StripeCardForm";
+import { createPaymentIntent } from "../api/payments";
+import { cartToItems } from "../api/orders";
 
 export default function Checkout() {
   const { state, placeOrder, cartSubtotal } = useStore();
@@ -10,6 +15,15 @@ export default function Checkout() {
   const enabledMethods = state.paymentMethods.filter((m) => m.enabled);
   const [selectedMethodId, setSelectedMethodId] = useState(enabledMethods[0]?.id || "");
   const [form, setForm] = useState({ email: state.user?.email || "", firstName: "", lastName: "", address: "", city: "", state: "", zip: "", phone: "", cardName: "", cardNumber: "", expiry: "", cvv: "" });
+
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [intentId, setIntentId] = useState<string | null>(null);
+  const selected = enabledMethods.find((m) => m.id === selectedMethodId);
+  const stripePromise = useMemo(
+    () => (selected?.type === "stripe" && selected.publicKey ? loadStripe(selected.publicKey) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selected?.id, selected?.publicKey],
+  );
 
   const shipping = cartSubtotal >= 199 ? 0 : 14.99;
   const tax = cartSubtotal * 0.08;
@@ -21,31 +35,40 @@ export default function Checkout() {
     }
   }, [enabledMethods, selectedMethodId]);
 
+  useEffect(() => {
+    if (step === 3 && selected?.type === "stripe" && !clientSecret && state.cart.length > 0) {
+      createPaymentIntent(cartToItems(state.cart))
+        .then((r) => { setClientSecret(r.clientSecret); setIntentId(r.intentId); })
+        .catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, selected?.id]);
+
   if (state.cart.length === 0) { nav("/cart"); return null; }
 
   function update<K extends keyof typeof form>(k: K, v: (typeof form)[K]) { setForm((f) => ({ ...f, [k]: v })); }
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (step < 3) { setStep((step + 1) as 1 | 2 | 3); return; }
-    const paymentMethod = enabledMethods.find((m) => m.id === selectedMethodId)?.name || "Manual Payment";
+  async function completeOrder() {
     try {
       await placeOrder({
-        items: state.cart.map((i) => ({ productId: i.productId, qty: i.qty })),
-        paymentMethod,
-        email: form.email,
-        phone: form.phone,
-        firstName: form.firstName,
-        lastName: form.lastName,
-        address: form.address,
-        city: form.city,
-        state: form.state,
-        zip: form.zip,
+        items: cartToItems(state.cart),
+        paymentMethod: selected?.name ?? "Manual Payment",
+        stripePaymentIntentId: intentId ?? undefined,
+        email: form.email, phone: form.phone,
+        firstName: form.firstName, lastName: form.lastName,
+        address: form.address, city: form.city, state: form.state, zip: form.zip,
       });
       nav("/order-success");
     } catch (err) {
       alert(err instanceof Error ? err.message : "Could not place order. Please try again.");
     }
+  }
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (step < 3) { setStep((step + 1) as 1 | 2 | 3); return; }
+    if (selected?.type === "stripe") return; // Stripe handled by StripeCardForm's Pay button
+    await completeOrder();
   }
 
   const inputCls = "w-full px-3 py-2.5 border border-neutral-300 rounded-sm text-sm focus:outline-none focus:border-red-500 bg-white";
@@ -144,10 +167,15 @@ export default function Checkout() {
                       if (method.type === "stripe") {
                         return (
                           <div className="space-y-3 pt-2">
-                            <div className="text-xs text-neutral-500 bg-neutral-50 border border-neutral-200 rounded-sm p-3">Demo Stripe card form. In production, Stripe Elements would mount here using the configured publishable key.</div>
-                            <div><label className="text-[11px] font-bold text-neutral-600 uppercase mb-1 block">Name on Card</label><input required className={inputCls} value={form.cardName} onChange={(e) => update("cardName", e.target.value)} /></div>
-                            <div><label className="text-[11px] font-bold text-neutral-600 uppercase mb-1 block">Card Number</label><input required className={inputCls} value={form.cardNumber} onChange={(e) => update("cardNumber", e.target.value)} placeholder="4242 4242 4242 4242" maxLength={19} /></div>
-                            <div className="grid grid-cols-2 gap-3"><div><label className="text-[11px] font-bold text-neutral-600 uppercase mb-1 block">Expiry</label><input required className={inputCls} value={form.expiry} onChange={(e) => update("expiry", e.target.value)} placeholder="MM/YY" /></div><div><label className="text-[11px] font-bold text-neutral-600 uppercase mb-1 block">CVV</label><input required className={inputCls} value={form.cvv} onChange={(e) => update("cvv", e.target.value)} placeholder="123" maxLength={4} /></div></div>
+                            {clientSecret && stripePromise ? (
+                              <Elements stripe={stripePromise} options={{ clientSecret }}>
+                                <StripeCardForm onConfirmed={completeOrder} />
+                              </Elements>
+                            ) : (
+                              <div className="text-xs text-neutral-500 bg-neutral-50 border border-neutral-200 rounded-sm p-3">
+                                {selected?.publicKey ? "Preparing secure payment…" : "Stripe is not fully configured (missing publishable key)."}
+                              </div>
+                            )}
                           </div>
                         );
                       }
@@ -169,9 +197,11 @@ export default function Checkout() {
               ) : (
                 <Link to="/cart" className="px-4 py-2.5 border border-neutral-300 text-sm font-bold rounded-sm">← Cart</Link>
               )}
-              <button type="submit" className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold uppercase rounded-sm transition">
-                {step === 3 ? `Place Order $${total.toFixed(2)}` : "Continue →"}
-              </button>
+              {!(step === 3 && selected?.type === "stripe") && (
+                <button type="submit" className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold uppercase rounded-sm transition">
+                  {step === 3 ? `Place Order $${total.toFixed(2)}` : "Continue →"}
+                </button>
+              )}
             </div>
           </div>
 
