@@ -27,6 +27,10 @@ class OrderController extends Controller {
         ]);
 
         if (! empty($data['stripePaymentIntentId'])) {
+            $existing = Order::where('stripe_payment_intent_id', $data['stripePaymentIntentId'])->with('items')->first();
+            if ($existing) {
+                return new OrderResource($existing); // idempotent: this intent already produced an order
+            }
             if (! $this->stripe->intentSucceeded($data['stripePaymentIntentId'])) {
                 throw ValidationException::withMessages(['payment' => ['Payment was not completed.']]);
             }

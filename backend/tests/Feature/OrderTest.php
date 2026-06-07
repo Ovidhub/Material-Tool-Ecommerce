@@ -83,6 +83,19 @@ it('accepts a stripe order whose intent succeeded', function () {
     ], authHeader($user))->assertCreated();
 });
 
+it('is idempotent for a repeated stripe intent (no duplicate order)', function () {
+    $this->mock(StripeService::class, function ($m) {
+        $m->shouldReceive('intentSucceeded')->once()->with('pi_dup')->andReturn(true);
+    });
+    $user = User::factory()->create();
+    $p = seedProduct(['stock' => 10]);
+    $payload = ['items' => [['productId' => $p->id, 'qty' => 1]], 'paymentMethod' => 'Credit / Debit Card', 'stripePaymentIntentId' => 'pi_dup'];
+    postJson('/api/orders', $payload, authHeader($user))->assertCreated();
+    postJson('/api/orders', $payload, authHeader($user))->assertOk(); // second call returns existing
+    expect(App\Models\Order::where('stripe_payment_intent_id', 'pi_dup')->count())->toBe(1);
+    expect($p->fresh()->stock)->toBe(9); // stock only decremented once
+});
+
 it('lists only the current users orders', function () {
     $a = User::factory()->create(); $b = User::factory()->create();
     $p = seedProduct();
