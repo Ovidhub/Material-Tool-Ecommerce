@@ -85,6 +85,16 @@ class OrderController extends Controller {
         return OrderResource::collection($orders);
     }
 
+    public function all() {
+        return OrderResource::collection(Order::with('items')->latest()->get());
+    }
+
+    public function updateStatus(Request $request, Order $order) {
+        $data = $request->validate(['status' => 'required|in:Pending,Processing,Shipped,Delivered']);
+        $order->update(['status' => $data['status']]);
+        return new OrderResource($order->load('items'));
+    }
+
     private function uniqueOrderId(): string {
         do { $id = 'TF-'.random_int(100000, 999999); } while (Order::whereKey($id)->exists());
         return $id;
