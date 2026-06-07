@@ -1,0 +1,24 @@
+import { api, setToken } from "./client";
+import type { User } from "./types";
+
+type AuthResponse = { token: string; user: User };
+
+export async function login(email: string, password: string): Promise<User> {
+  const r = await api<AuthResponse>("/login", { method: "POST", body: JSON.stringify({ email, password }) });
+  setToken(r.token);
+  return r.user;
+}
+export async function register(name: string, email: string, password: string): Promise<User> {
+  const r = await api<AuthResponse>("/register", {
+    method: "POST",
+    body: JSON.stringify({ name, email, password, password_confirmation: password }),
+  });
+  setToken(r.token);
+  return r.user;
+}
+export async function logout(): Promise<void> {
+  try { await api("/logout", { method: "POST" }); } finally { setToken(null); }
+}
+export async function me(): Promise<User | null> {
+  try { return await api<User>("/user"); } catch { setToken(null); return null; }
+}
