@@ -4,3 +4,6 @@ backend/vendor/
 backend/.env
 backend/database/*.sqlite
 .env.local
+.playwright-mcp/
+vite-dev.log
+backend/storage/logs/*.log
