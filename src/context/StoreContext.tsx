@@ -459,32 +459,35 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [products, categories, paymentMethods, siteContent, user] = await Promise.all([
-        productsApi.listProducts({ per_page: 200 }).then((r) => r.data).catch(() => []),
-        categoriesApi.listCategories().catch(() => []),
-        paymentMethodsApi.listPaymentMethods().catch(() => []),
-        siteContentApi.getSiteContent().catch(() => seedSiteContent),
-        authApi.me(),
-      ]);
-      if (cancelled) return;
-      dispatch({
-        type: "BOOTSTRAP",
-        payload: {
-          products,
-          categories,
-          paymentMethods,
-          siteContent: { ...seedSiteContent, ...siteContent },
-          user: user ?? null,
-        },
-      });
-      if (user) {
-        const [orders, wishlist] = await Promise.all([
-          ordersApi.listOrders().catch(() => []),
-          wishlistApi.listWishlist().catch(() => []),
+      try {
+        const [products, categories, paymentMethods, siteContent, user] = await Promise.all([
+          productsApi.listProducts({ per_page: 200 }).then((r) => r.data).catch(() => []),
+          categoriesApi.listCategories().catch(() => []),
+          paymentMethodsApi.listPaymentMethods().catch(() => []),
+          siteContentApi.getSiteContent().catch(() => seedSiteContent),
+          authApi.me(),
         ]);
-        if (!cancelled) dispatch({ type: "BOOTSTRAP", payload: { orders, wishlist } });
+        if (cancelled) return;
+        dispatch({
+          type: "BOOTSTRAP",
+          payload: {
+            products,
+            categories,
+            paymentMethods,
+            siteContent: { ...seedSiteContent, ...siteContent },
+            user: user ?? null,
+          },
+        });
+        if (user) {
+          const [orders, wishlist] = await Promise.all([
+            ordersApi.listOrders().catch(() => []),
+            wishlistApi.listWishlist().catch(() => []),
+          ]);
+          if (!cancelled) dispatch({ type: "BOOTSTRAP", payload: { orders, wishlist } });
+        }
+      } finally {
+        if (!cancelled) dispatch({ type: "SET_LOADING", loading: false });
       }
-      if (!cancelled) dispatch({ type: "SET_LOADING", loading: false });
     })();
     return () => {
       cancelled = true;
@@ -533,6 +536,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         dispatch({ type: "BOOTSTRAP", payload: { orders: [], wishlist: [] } });
       },
       toggleWishlist: async (productId) => {
+        if (!state.user) { dispatch({ type: "TOAST", message: "Sign in to save items to your wishlist" }); return; }
         const has = state.wishlist.includes(productId);
         dispatch({ type: "TOGGLE_WISHLIST", productId }); // optimistic
         try {

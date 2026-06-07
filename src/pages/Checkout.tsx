@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useStore } from "../context/StoreContext";
 import type { PaymentMethod } from "../context/StoreContext";
 import { loadStripe } from "@stripe/stripe-js";
@@ -9,13 +9,14 @@ import { createPaymentIntent } from "../api/payments";
 import { cartToItems } from "../api/orders";
 
 export default function Checkout() {
-  const { state, placeOrder, cartSubtotal } = useStore();
+  const { state, placeOrder, cartSubtotal, toast } = useStore();
   const nav = useNavigate();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const enabledMethods = state.paymentMethods.filter((m) => m.enabled);
   const [selectedMethodId, setSelectedMethodId] = useState(enabledMethods[0]?.id || "");
   const [form, setForm] = useState({ email: state.user?.email || "", firstName: "", lastName: "", address: "", city: "", state: "", zip: "", phone: "", cardName: "", cardNumber: "", expiry: "", cvv: "" });
 
+  const [placing, setPlacing] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [intentId, setIntentId] = useState<string | null>(null);
   const selected = enabledMethods.find((m) => m.id === selectedMethodId);
@@ -35,20 +36,25 @@ export default function Checkout() {
     }
   }, [enabledMethods, selectedMethodId]);
 
+  const cartSig = state.cart.map((i) => `${i.productId}:${i.qty}`).join(",");
+  useEffect(() => { setClientSecret(null); setIntentId(null); }, [cartSig]);
+
   useEffect(() => {
     if (step === 3 && selected?.type === "stripe" && !clientSecret && state.cart.length > 0) {
       createPaymentIntent(cartToItems(state.cart))
         .then((r) => { setClientSecret(r.clientSecret); setIntentId(r.intentId); })
-        .catch(() => {});
+        .catch(() => toast("Could not initialize payment. Please try again."));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, selected?.id]);
+  }, [step, selected?.id, clientSecret]);
 
-  if (state.cart.length === 0) { nav("/cart"); return null; }
+  if (state.cart.length === 0) return <Navigate to="/cart" replace />;
 
   function update<K extends keyof typeof form>(k: K, v: (typeof form)[K]) { setForm((f) => ({ ...f, [k]: v })); }
 
   async function completeOrder() {
+    if (placing) return;
+    setPlacing(true);
     try {
       await placeOrder({
         items: cartToItems(state.cart),
@@ -60,7 +66,9 @@ export default function Checkout() {
       });
       nav("/order-success");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Could not place order. Please try again.");
+      toast(err instanceof Error ? err.message : "Could not place your order. If you were charged, please retry — you will not be charged twice.");
+    } finally {
+      setPlacing(false);
     }
   }
 
@@ -198,8 +206,8 @@ export default function Checkout() {
                 <Link to="/cart" className="px-4 py-2.5 border border-neutral-300 text-sm font-bold rounded-sm">← Cart</Link>
               )}
               {!(step === 3 && selected?.type === "stripe") && (
-                <button type="submit" className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold uppercase rounded-sm transition">
-                  {step === 3 ? `Place Order $${total.toFixed(2)}` : "Continue →"}
+                <button type="submit" disabled={placing} className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold uppercase rounded-sm transition disabled:opacity-60">
+                  {step === 3 ? (placing ? "Placing…" : `Place Order $${total.toFixed(2)}`) : "Continue →"}
                 </button>
               )}
             </div>

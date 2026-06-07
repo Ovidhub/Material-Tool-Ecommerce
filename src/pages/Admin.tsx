@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useStore } from "../context/StoreContext";
-import type { HeroSlide, PaymentMethod, PaymentMethodType, SiteContent } from "../context/StoreContext";
+import type { HeroSlide, Order, PaymentMethod, PaymentMethodType, SiteContent } from "../context/StoreContext";
+import { listAllOrders } from "../api/orders";
 import { brands } from "../data/products";
 import type { Product } from "../data/products";
 import { DollarIcon, PackageIcon, UsersIcon, WrenchIcon, categoryIconMap } from "../components/Icons";
@@ -160,6 +161,10 @@ export default function Admin() {
   const errMsg = (err: unknown) => (err instanceof Error ? err.message : "Something went wrong");
   if (!state.user || !["admin", "super_admin"].includes(state.user.role)) return <Navigate to="/login" replace />;
 
+  const [adminOrders, setAdminOrders] = useState<Order[]>([]);
+  const loadAdminOrders = () => { listAllOrders().then(setAdminOrders).catch(() => {}); };
+  useEffect(() => { loadAdminOrders(); }, []);
+
   const [tab, setTab] = useState<"dashboard" | "products" | "categories" | "orders" | "payments" | "content" | "customers">("dashboard");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
@@ -178,21 +183,16 @@ export default function Admin() {
   const products = state.products;
   const categories = state.categories;
 
-  const demoOrders = [
-    { id: "TR-100432", date: new Date(Date.now() - 86400000).toISOString(), items: [], total: 329.47, status: "Shipped" as const },
-    { id: "TR-100431", date: new Date(Date.now() - 172800000).toISOString(), items: [], total: 149.99, status: "Delivered" as const },
-    { id: "TR-100430", date: new Date(Date.now() - 259200000).toISOString(), items: [], total: 578.22, status: "Processing" as const },
-  ];
-  const allOrders = state.orders.length ? state.orders : demoOrders;
+  const allOrders = adminOrders;
 
   const stats = useMemo(
     () => ({
-      revenue: state.orders.reduce((s, o) => s + o.total, 0) + 24580,
-      orders: state.orders.length + 142,
+      revenue: adminOrders.reduce((s, o) => s + o.total, 0) + 24580,
+      orders: adminOrders.length + 142,
       customers: 3847,
       products: products.length,
     }),
-    [state.orders, products.length],
+    [adminOrders, products.length],
   );
 
   function openAddForm() {
@@ -669,13 +669,13 @@ export default function Admin() {
                 <thead className="bg-neutral-50 text-[11px] uppercase tracking-wider text-neutral-500"><tr><th className="text-left px-5 py-2.5 font-bold">Order</th><th className="text-left px-5 py-2.5 font-bold">Date</th><th className="text-left px-5 py-2.5 font-bold">Items</th><th className="text-left px-5 py-2.5 font-bold">Total</th><th className="text-left px-5 py-2.5 font-bold">Status</th></tr></thead>
                 <tbody className="divide-y divide-neutral-100 text-sm">
                   {allOrders.map((o) => {
-                    const isRealOrder = state.orders.some((order) => order.id === o.id);
+                    const isRealOrder = adminOrders.some((order) => order.id === o.id);
                     return (
                       <tr key={o.id} className="hover:bg-neutral-50">
                         <td className="px-5 py-3 font-semibold">{o.id}</td><td className="px-5 py-3 text-neutral-600">{new Date(o.date).toLocaleDateString()}</td><td className="px-5 py-3 text-neutral-600">{o.items.length || 3}</td><td className="px-5 py-3 font-bold">${o.total.toFixed(2)}</td>
                         <td className="px-5 py-3">
                           {isRealOrder ? (
-                            <select value={o.status} onChange={async (e) => { try { await updateOrderStatus(o.id, e.target.value as typeof o.status); } catch (err) { toast(errMsg(err)); } }} className={`px-2.5 py-1 rounded-sm text-[10px] font-bold uppercase border-0 ${statusCls(o.status)}`}>
+                            <select value={o.status} onChange={async (e) => { try { await updateOrderStatus(o.id, e.target.value as typeof o.status); loadAdminOrders(); } catch (err) { toast(errMsg(err)); } }} className={`px-2.5 py-1 rounded-sm text-[10px] font-bold uppercase border-0 ${statusCls(o.status)}`}>
                               <option>Pending</option><option>Processing</option><option>Shipped</option><option>Delivered</option>
                             </select>
                           ) : <span className={`px-2.5 py-1 rounded-sm text-[10px] font-bold uppercase ${statusCls(o.status)}`}>{o.status}</span>}
