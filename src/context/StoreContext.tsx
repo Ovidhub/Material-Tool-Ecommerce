@@ -186,8 +186,8 @@ type Action =
   | { type: "TOAST"; message: string | null };
 
 const seedSiteContent: SiteContent = {
-  brandName: "TOOL",
-  brandAccent: "RACK",
+  brandName: "Hechi",
+  brandAccent: "material",
   tagline: "Professional Material Tools & Equipment Store",
   logoUrl: "",
   logoBoxColor: "#dc2626",
@@ -197,7 +197,7 @@ const seedSiteContent: SiteContent = {
   promoText: "Get Upto 25% Cashback On First Order",
   promoCode: "GET250FF",
   phone: "1-800-TOOL-495",
-  email: "support@toolrack.com",
+  email: "info@hechimaterial.online",
   address: "1234 Industrial Way",
   cityLine: "Portland, OR 97201",
   hours: "Mon-Fri: 7am-8pm · Sat: 8am-6pm",
@@ -231,7 +231,7 @@ const seedSiteContent: SiteContent = {
   dealLink: "/product/bosch-gks-235-turbo-circular-saw",
   dealImage: "https://images.pexels.com/photos/5846253/pexels-photo-5846253.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200",
   testimonialTitle: "What Our Client Says",
-  testimonialQuote: "ToolRack has been my go-to shop for 5 years. Quality tools, fast shipping, and unbeatable prices.",
+  testimonialQuote: "Hechimaterial has been my go-to shop for 5 years. Quality tools, fast shipping, and unbeatable prices.",
   testimonialName: "Marcus Chen",
   testimonialRole: "General Contractor",
   sidebarPromoEyebrow: "LIMITED OFFER",
@@ -243,7 +243,7 @@ const seedSiteContent: SiteContent = {
   aboutHeroEyebrow: "Our Story",
   aboutHeroTitle: "Building Trust,",
   aboutHeroHighlight: "One Tool At A Time.",
-  aboutHeroText: "Since 1998, ToolRack has been the trusted partner for contractors, tradespeople, and serious DIYers across North America.",
+  aboutHeroText: "Since 1998, Hechimaterial has been the trusted partner for contractors, tradespeople, and serious DIYers across North America.",
   aboutImage: "https://images.pexels.com/photos/4312855/pexels-photo-4312855.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200",
   aboutMissionEyebrow: "Our Mission",
   aboutMissionTitle: "Equip the hands that build our world.",

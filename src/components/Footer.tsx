@@ -48,7 +48,7 @@ export default function Footer() {
           <div className="flex gap-2">{["VISA", "MC", "AMEX", "PP"].map((c) => (<span key={c} className="px-2.5 py-1.5 bg-neutral-800 rounded text-[9px] font-bold text-neutral-400 tracking-wider">{c}</span>))}</div>
         </div>
       </div>
-      <div className="border-t border-neutral-800"><div className="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-2 text-[11px] text-neutral-500"><span>&copy; {new Date().getFullYear()} {site.brandName}{site.brandAccent} Material Tools Co. All rights reserved.</span><div className="flex gap-4"><a href="#" className="hover:text-red-500 transition">Privacy Policy</a><a href="#" className="hover:text-red-500 transition">Terms of Service</a></div></div></div>
+      <div className="border-t border-neutral-800"><div className="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-2 text-[11px] text-neutral-500"><span>&copy; {new Date().getFullYear()} {site.brandName}{site.brandAccent}. All rights reserved.</span><div className="flex gap-4"><a href="#" className="hover:text-red-500 transition">Privacy Policy</a><a href="#" className="hover:text-red-500 transition">Terms of Service</a></div></div></div>
     </footer>
   );
 }

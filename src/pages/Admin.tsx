@@ -403,7 +403,7 @@ export default function Admin() {
           buttonText: "SHOP NOW",
           link: "/shop",
           image: "https://images.pexels.com/photos/4312855/pexels-photo-4312855.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200",
-          brand: "ToolRack",
+          brand: "Hechimaterial",
         },
       ],
     }));

@@ -31,7 +31,7 @@ export default function Login() {
         <div className="text-center mb-6">
           <div className="flex items-center justify-center gap-2 mb-4">
             <div className="w-10 h-10 rounded bg-red-600 grid place-items-center"><svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg></div>
-            <div><span className="font-black text-xl text-neutral-900">TOOL</span><span className="font-black text-xl text-red-600">RACK</span></div>
+            <div><span className="font-black text-xl text-neutral-900">Hechi</span><span className="font-black text-xl text-red-600">material</span></div>
           </div>
           <h1 className="text-2xl font-black text-neutral-900">{mode === "login" ? "Welcome Back" : "Create Account"}</h1>
         </div>
@@ -54,7 +54,6 @@ export default function Login() {
               <Link to="/forgot-password" className="text-xs font-semibold text-red-600 hover:text-red-700">Forgot your password?</Link>
             </div>
           )}
-          <div className="mt-4 bg-neutral-50 border border-neutral-200 rounded-sm p-3 text-[11px] text-neutral-500"><b className="text-neutral-700">Demo:</b> Use <code className="text-red-600">super@toolrack.com</code> for super admin, <code className="text-red-600">admin@toolrack.com</code> for admin.</div>
         </div>
       </div>
     </div>
