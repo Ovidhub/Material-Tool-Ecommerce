@@ -1,7 +1,13 @@
 import { createContext, useContext, useEffect, useMemo, useReducer } from "react";
 import type { ReactNode } from "react";
-import { categories as seedCategories, products as seedProducts } from "../data/products";
 import type { Category, Product } from "../data/products";
+import * as authApi from "../api/auth";
+import * as productsApi from "../api/products";
+import * as categoriesApi from "../api/categories";
+import * as ordersApi from "../api/orders";
+import * as wishlistApi from "../api/wishlist";
+import * as paymentMethodsApi from "../api/paymentMethods";
+import * as siteContentApi from "../api/siteContent";
 
 export type CartItem = {
   productId: number;
@@ -151,6 +157,7 @@ type State = {
   paymentMethods: PaymentMethod[];
   siteContent: SiteContent;
   toast: string | null;
+  loading: boolean;
 };
 
 type Action =
@@ -161,8 +168,10 @@ type Action =
   | { type: "LOGIN"; user: User }
   | { type: "LOGOUT" }
   | { type: "TOGGLE_WISHLIST"; productId: number }
-  | { type: "PLACE_ORDER"; order: Order }
-  | { type: "UPDATE_ORDER_STATUS"; orderId: string; status: Order["status"] }
+  | { type: "BOOTSTRAP"; payload: Partial<State> }
+  | { type: "SET_LOADING"; loading: boolean }
+  | { type: "PLACE_ORDER_RESULT"; order: Order }
+  | { type: "UPDATE_ORDER_RESULT"; order: Order }
   | { type: "ADD_PRODUCT"; product: Product }
   | { type: "UPDATE_PRODUCT"; product: Product }
   | { type: "DELETE_PRODUCT"; productId: number }
@@ -175,18 +184,6 @@ type Action =
   | { type: "TOGGLE_PAYMENT_METHOD"; methodId: string }
   | { type: "UPDATE_SITE_CONTENT"; siteContent: SiteContent }
   | { type: "TOAST"; message: string | null };
-
-const seedPaymentMethods: PaymentMethod[] = [
-  {
-    id: "stripe-default",
-    type: "stripe",
-    name: "Credit / Debit Card",
-    enabled: true,
-    mode: "test",
-    publicKey: "pk_test_demo",
-    instructions: "Cards are processed securely through Stripe.",
-  },
-];
 
 const seedSiteContent: SiteContent = {
   brandName: "TOOL",
@@ -306,11 +303,12 @@ const initialState: State = {
   user: null,
   wishlist: [],
   orders: [],
-  products: seedProducts,
-  categories: seedCategories,
-  paymentMethods: seedPaymentMethods,
+  products: [],
+  categories: [],
+  paymentMethods: [],
   siteContent: seedSiteContent,
   toast: null,
+  loading: true,
 };
 
 function reducer(state: State, action: Action): State {
@@ -352,12 +350,16 @@ function reducer(state: State, action: Action): State {
           : [...state.wishlist, action.productId],
       };
     }
-    case "PLACE_ORDER":
+    case "BOOTSTRAP":
+      return { ...state, ...action.payload };
+    case "SET_LOADING":
+      return { ...state, loading: action.loading };
+    case "PLACE_ORDER_RESULT":
       return { ...state, orders: [action.order, ...state.orders], cart: [] };
-    case "UPDATE_ORDER_STATUS":
+    case "UPDATE_ORDER_RESULT":
       return {
         ...state,
-        orders: state.orders.map((o) => (o.id === action.orderId ? { ...o, status: action.status } : o)),
+        orders: state.orders.map((o) => (o.id === action.order.id ? action.order : o)),
       };
     case "ADD_PRODUCT":
       return { ...state, products: [action.product, ...state.products] };
@@ -416,22 +418,23 @@ type StoreContextValue = {
   removeFromCart: (productId: number) => void;
   updateQty: (productId: number, qty: number) => void;
   clearCart: () => void;
-  login: (user: User) => void;
-  logout: () => void;
-  toggleWishlist: (productId: number) => void;
-  placeOrder: (order: Omit<Order, "id" | "date" | "status">) => void;
-  updateOrderStatus: (orderId: string, status: Order["status"]) => void;
-  addProduct: (product: Omit<Product, "id" | "slug" | "reviews"> & { reviews?: number; slug?: string }) => Product;
-  updateProduct: (product: Product) => void;
-  deleteProduct: (productId: number) => void;
-  addCategory: (name: string) => Category;
-  updateCategory: (category: Category) => void;
-  deleteCategory: (categoryId: string) => void;
-  addPaymentMethod: (method: Omit<PaymentMethod, "id">) => PaymentMethod;
-  updatePaymentMethod: (method: PaymentMethod) => void;
-  deletePaymentMethod: (methodId: string) => void;
-  togglePaymentMethod: (methodId: string) => void;
-  updateSiteContent: (siteContent: SiteContent) => void;
+  login: (email: string, password: string) => Promise<User>;
+  register: (name: string, email: string, password: string) => Promise<User>;
+  logout: () => Promise<void>;
+  toggleWishlist: (productId: number) => Promise<void>;
+  placeOrder: (payload: Parameters<typeof ordersApi.placeOrder>[0]) => Promise<Order>;
+  updateOrderStatus: (orderId: string, status: Order["status"]) => Promise<void>;
+  addProduct: (product: Omit<Product, "id" | "slug" | "reviews"> & { reviews?: number; slug?: string }) => Promise<Product>;
+  updateProduct: (product: Product) => Promise<void>;
+  deleteProduct: (productId: number) => Promise<void>;
+  addCategory: (name: string) => Promise<Category>;
+  updateCategory: (category: Category) => Promise<void>;
+  deleteCategory: (categoryId: string) => Promise<void>;
+  addPaymentMethod: (method: Omit<PaymentMethod, "id">) => Promise<PaymentMethod>;
+  updatePaymentMethod: (method: PaymentMethod) => Promise<void>;
+  deletePaymentMethod: (methodId: string) => Promise<void>;
+  togglePaymentMethod: (methodId: string) => Promise<void>;
+  updateSiteContent: (siteContent: SiteContent) => Promise<void>;
   toast: (msg: string) => void;
   cartCount: number;
   cartSubtotal: number;
@@ -442,25 +445,51 @@ const StoreContext = createContext<StoreContextValue | null>(null);
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState, (init) => {
     try {
-      const saved = localStorage.getItem("toolforge-state");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return {
-          ...init,
-          ...parsed,
-          products: parsed.products?.length ? parsed.products : seedProducts,
-          categories: parsed.categories?.length ? parsed.categories : seedCategories,
-          paymentMethods: parsed.paymentMethods?.length ? parsed.paymentMethods : seedPaymentMethods,
-          siteContent: parsed.siteContent ? { ...seedSiteContent, ...parsed.siteContent } : seedSiteContent,
-        };
-      }
-    } catch {}
-    return init;
+      const savedCart = localStorage.getItem("toolrack-cart");
+      return savedCart ? { ...init, cart: JSON.parse(savedCart) as CartItem[] } : init;
+    } catch {
+      return init;
+    }
   });
 
   useEffect(() => {
-    localStorage.setItem("toolforge-state", JSON.stringify(state));
-  }, [state]);
+    localStorage.setItem("toolrack-cart", JSON.stringify(state.cart));
+  }, [state.cart]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [products, categories, paymentMethods, siteContent, user] = await Promise.all([
+        productsApi.listProducts({ per_page: 200 }).then((r) => r.data).catch(() => []),
+        categoriesApi.listCategories().catch(() => []),
+        paymentMethodsApi.listPaymentMethods().catch(() => []),
+        siteContentApi.getSiteContent().catch(() => seedSiteContent),
+        authApi.me(),
+      ]);
+      if (cancelled) return;
+      dispatch({
+        type: "BOOTSTRAP",
+        payload: {
+          products,
+          categories,
+          paymentMethods,
+          siteContent: { ...seedSiteContent, ...siteContent },
+          user: user ?? null,
+        },
+      });
+      if (user) {
+        const [orders, wishlist] = await Promise.all([
+          ordersApi.listOrders().catch(() => []),
+          wishlistApi.listWishlist().catch(() => []),
+        ]);
+        if (!cancelled) dispatch({ type: "BOOTSTRAP", payload: { orders, wishlist } });
+      }
+      if (!cancelled) dispatch({ type: "SET_LOADING", loading: false });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!state.toast) return;
@@ -483,86 +512,104 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       removeFromCart: (productId) => dispatch({ type: "REMOVE_FROM_CART", productId }),
       updateQty: (productId, qty) => dispatch({ type: "UPDATE_QTY", productId, qty }),
       clearCart: () => dispatch({ type: "CLEAR_CART" }),
-      login: (user) => dispatch({ type: "LOGIN", user }),
-      logout: () => dispatch({ type: "LOGOUT" }),
-      toggleWishlist: (productId) => dispatch({ type: "TOGGLE_WISHLIST", productId }),
-      placeOrder: (o) =>
-        dispatch({
-          type: "PLACE_ORDER",
-          order: {
-            ...o,
-            id: "TF-" + Math.floor(100000 + Math.random() * 900000),
-            date: new Date().toISOString(),
-            status: "Pending",
-          },
-        }),
-      updateOrderStatus: (orderId, status) => {
-        dispatch({ type: "UPDATE_ORDER_STATUS", orderId, status });
+      login: async (email, password) => {
+        const user = await authApi.login(email, password);
+        dispatch({ type: "LOGIN", user });
+        const [orders, wishlist] = await Promise.all([
+          ordersApi.listOrders().catch(() => []),
+          wishlistApi.listWishlist().catch(() => []),
+        ]);
+        dispatch({ type: "BOOTSTRAP", payload: { orders, wishlist } });
+        return user;
+      },
+      register: async (name, email, password) => {
+        const user = await authApi.register(name, email, password);
+        dispatch({ type: "LOGIN", user });
+        return user;
+      },
+      logout: async () => {
+        await authApi.logout();
+        dispatch({ type: "LOGOUT" });
+        dispatch({ type: "BOOTSTRAP", payload: { orders: [], wishlist: [] } });
+      },
+      toggleWishlist: async (productId) => {
+        const has = state.wishlist.includes(productId);
+        dispatch({ type: "TOGGLE_WISHLIST", productId }); // optimistic
+        try {
+          if (has) await wishlistApi.removeWishlist(productId);
+          else await wishlistApi.addWishlist(productId);
+        } catch {
+          dispatch({ type: "TOGGLE_WISHLIST", productId }); // revert
+        }
+      },
+      placeOrder: async (payload) => {
+        const order = await ordersApi.placeOrder(payload);
+        dispatch({ type: "PLACE_ORDER_RESULT", order });
+        return order;
+      },
+      updateOrderStatus: async (orderId, status) => {
+        const order = await ordersApi.updateOrderStatus(orderId, status);
+        dispatch({ type: "UPDATE_ORDER_RESULT", order });
         dispatch({ type: "TOAST", message: `Order ${orderId} marked ${status}` });
       },
-      addProduct: (productInput) => {
-        const nextId = Math.max(0, ...state.products.map((p) => p.id)) + 1;
-        const slugBase = productInput.slug || productInput.name;
-        const slug = slugBase
-          .toLowerCase()
-          .trim()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-+|-+$/g, "");
-        const product: Product = {
-          ...productInput,
-          id: nextId,
-          slug: `${slug}-${nextId}`,
-          reviews: productInput.reviews ?? 0,
-        };
+      addProduct: async (productInput) => {
+        const product = await productsApi.createProduct(productInput);
         dispatch({ type: "ADD_PRODUCT", product });
         dispatch({ type: "TOAST", message: `Product "${product.name}" added` });
         return product;
       },
-      updateProduct: (product) => {
-        dispatch({ type: "UPDATE_PRODUCT", product });
-        dispatch({ type: "TOAST", message: `Product "${product.name}" updated` });
+      updateProduct: async (product) => {
+        const updated = await productsApi.updateProduct(product.id, product);
+        dispatch({ type: "UPDATE_PRODUCT", product: updated });
+        dispatch({ type: "TOAST", message: `Product "${updated.name}" updated` });
       },
-      deleteProduct: (productId) => {
+      deleteProduct: async (productId) => {
+        await productsApi.deleteProduct(productId);
         dispatch({ type: "DELETE_PRODUCT", productId });
         dispatch({ type: "TOAST", message: "Product deleted" });
       },
-      addCategory: (name) => {
-        const slug = name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-        const baseId = slug || `category-${Date.now()}`;
-        const id = state.categories.some((c) => c.id === baseId) ? `${baseId}-${Date.now().toString().slice(-4)}` : baseId;
-        const category: Category = { id, name: name.trim(), count: 0 };
+      addCategory: async (name) => {
+        const category = await categoriesApi.createCategory(name);
         dispatch({ type: "ADD_CATEGORY", category });
         dispatch({ type: "TOAST", message: `Category "${category.name}" added` });
         return category;
       },
-      updateCategory: (category) => {
-        dispatch({ type: "UPDATE_CATEGORY", category });
-        dispatch({ type: "TOAST", message: `Category "${category.name}" updated` });
+      updateCategory: async (category) => {
+        const updated = await categoriesApi.updateCategory(category.id, category.name);
+        dispatch({ type: "UPDATE_CATEGORY", category: updated });
+        dispatch({ type: "TOAST", message: `Category "${updated.name}" updated` });
       },
-      deleteCategory: (categoryId) => {
+      deleteCategory: async (categoryId) => {
+        await categoriesApi.deleteCategory(categoryId);
         dispatch({ type: "DELETE_CATEGORY", categoryId });
         dispatch({ type: "TOAST", message: "Category deleted" });
       },
-      addPaymentMethod: (methodInput) => {
-        const method: PaymentMethod = { ...methodInput, id: `${methodInput.type}-${Date.now()}` };
+      addPaymentMethod: async (methodInput) => {
+        const method = await paymentMethodsApi.createPaymentMethod(methodInput);
         dispatch({ type: "ADD_PAYMENT_METHOD", method });
         dispatch({ type: "TOAST", message: `${method.name} payment method added` });
         return method;
       },
-      updatePaymentMethod: (method) => {
-        dispatch({ type: "UPDATE_PAYMENT_METHOD", method });
-        dispatch({ type: "TOAST", message: `${method.name} payment method updated` });
+      updatePaymentMethod: async (method) => {
+        const updated = await paymentMethodsApi.updatePaymentMethod(method);
+        dispatch({ type: "UPDATE_PAYMENT_METHOD", method: updated });
+        dispatch({ type: "TOAST", message: `${updated.name} payment method updated` });
       },
-      deletePaymentMethod: (methodId) => {
+      deletePaymentMethod: async (methodId) => {
+        await paymentMethodsApi.deletePaymentMethod(methodId);
         dispatch({ type: "DELETE_PAYMENT_METHOD", methodId });
         dispatch({ type: "TOAST", message: "Payment method deleted" });
       },
-      togglePaymentMethod: (methodId) => {
-        dispatch({ type: "TOGGLE_PAYMENT_METHOD", methodId });
+      togglePaymentMethod: async (methodId) => {
+        const method = state.paymentMethods.find((x) => x.id === methodId);
+        if (!method) return;
+        const updated = await paymentMethodsApi.updatePaymentMethod({ ...method, enabled: !method.enabled });
+        dispatch({ type: "UPDATE_PAYMENT_METHOD", method: updated });
         dispatch({ type: "TOAST", message: "Payment method status changed" });
       },
-      updateSiteContent: (siteContent) => {
-        dispatch({ type: "UPDATE_SITE_CONTENT", siteContent });
+      updateSiteContent: async (siteContent) => {
+        const saved = await siteContentApi.updateSiteContent(siteContent);
+        dispatch({ type: "UPDATE_SITE_CONTENT", siteContent: { ...seedSiteContent, ...saved } });
         dispatch({ type: "TOAST", message: "Website content updated" });
       },
       toast: (message) => dispatch({ type: "TOAST", message }),
