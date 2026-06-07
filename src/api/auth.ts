@@ -22,3 +22,13 @@ export async function logout(): Promise<void> {
 export async function me(): Promise<User | null> {
   try { return await api<User>("/user"); } catch { setToken(null); return null; }
 }
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  await api("/user/password", {
+    method: "POST",
+    body: JSON.stringify({
+      current_password: currentPassword,
+      password: newPassword,
+      password_confirmation: newPassword,
+    }),
+  });
+}

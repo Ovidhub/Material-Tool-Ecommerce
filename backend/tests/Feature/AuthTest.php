@@ -32,3 +32,31 @@ it('returns the authenticated user', function () {
     getJson('/api/user', ['Authorization' => "Bearer $token"])->assertOk()
         ->assertJson(['email' => $user->email]);
 });
+
+it('lets an authenticated user change their password with the correct current password', function () {
+    $user = User::factory()->create(['password' => bcrypt('oldpass123')]);
+    $token = $user->createToken('t')->plainTextToken;
+    postJson('/api/user/password', [
+        'current_password' => 'oldpass123',
+        'password' => 'newpass123',
+        'password_confirmation' => 'newpass123',
+    ], ['Authorization' => "Bearer $token"])->assertOk();
+    expect(\Illuminate\Support\Facades\Hash::check('newpass123', $user->fresh()->password))->toBeTrue();
+});
+
+it('rejects a password change when the current password is wrong', function () {
+    $user = User::factory()->create(['password' => bcrypt('oldpass123')]);
+    $token = $user->createToken('t')->plainTextToken;
+    postJson('/api/user/password', [
+        'current_password' => 'wrongpass',
+        'password' => 'newpass123',
+        'password_confirmation' => 'newpass123',
+    ], ['Authorization' => "Bearer $token"])->assertStatus(422);
+    expect(\Illuminate\Support\Facades\Hash::check('oldpass123', $user->fresh()->password))->toBeTrue();
+});
+
+it('requires authentication to change a password', function () {
+    postJson('/api/user/password', [
+        'current_password' => 'x', 'password' => 'newpass123', 'password_confirmation' => 'newpass123',
+    ])->assertStatus(401);
+});

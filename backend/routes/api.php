@@ -21,6 +21,7 @@ Route::get('/site-content', [SiteContentController::class, 'show']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/user/password', [AuthController::class, 'updatePassword']);
 
     Route::post('/payments/intent', [PaymentController::class, 'intent']);
 

@@ -421,6 +421,7 @@ type StoreContextValue = {
   login: (email: string, password: string) => Promise<User>;
   register: (name: string, email: string, password: string) => Promise<User>;
   logout: () => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   toggleWishlist: (productId: number) => Promise<void>;
   placeOrder: (payload: Parameters<typeof ordersApi.placeOrder>[0]) => Promise<Order>;
   updateOrderStatus: (orderId: string, status: Order["status"]) => Promise<void>;
@@ -534,6 +535,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         await authApi.logout();
         dispatch({ type: "LOGOUT" });
         dispatch({ type: "BOOTSTRAP", payload: { orders: [], wishlist: [] } });
+      },
+      changePassword: async (currentPassword, newPassword) => {
+        await authApi.changePassword(currentPassword, newPassword);
+        dispatch({ type: "TOAST", message: "Password updated" });
       },
       toggleWishlist: async (productId) => {
         if (!state.user) { dispatch({ type: "TOAST", message: "Sign in to save items to your wishlist" }); return; }
