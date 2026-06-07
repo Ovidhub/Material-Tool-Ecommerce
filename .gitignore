@@ -7,3 +7,5 @@ backend/database/*.sqlite
 .playwright-mcp/
 vite-dev.log
 backend/storage/logs/*.log
+deploy/
+backend/.env.production
