@@ -21,7 +21,8 @@ return [
 
     'allowed_origins' => [env('FRONTEND_URL', 'http://localhost:5173')],
 
-    'allowed_origins_patterns' => [],
+    // Allow the Vite dev server on any localhost port (it auto-picks 5174+ if 5173 is taken).
+    'allowed_origins_patterns' => ['#^http://(localhost|127\.0\.0\.1):\d+$#'],
 
     'allowed_headers' => ['*'],
 
