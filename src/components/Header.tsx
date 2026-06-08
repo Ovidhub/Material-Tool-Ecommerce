@@ -33,9 +33,13 @@ export default function Header() {
       <div className="bg-white border-b border-neutral-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 h-[70px] flex items-center gap-4">
           <Link to="/" className="flex items-center gap-2 shrink-0 mr-4">
-            <div className="w-9 h-9 rounded grid place-items-center overflow-hidden" style={{ backgroundColor: site.logoBoxColor }}>
-              {site.logoUrl ? <img src={site.logoUrl} alt="Logo" className="w-full h-full object-cover" /> : <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>}
-            </div>
+            {site.logoUrl ? (
+              <img src={site.logoUrl} alt="Logo" className="h-10 w-auto max-w-[160px] object-contain" />
+            ) : (
+              <div className="w-9 h-9 rounded grid place-items-center overflow-hidden" style={{ backgroundColor: site.logoBoxColor }}>
+                <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+              </div>
+            )}
             <div className="leading-tight hidden sm:block"><span className="font-black text-xl text-neutral-900 tracking-tight">{site.brandName}</span><span className="font-black text-xl text-red-600 tracking-tight">{site.brandAccent}</span></div>
           </Link>
 

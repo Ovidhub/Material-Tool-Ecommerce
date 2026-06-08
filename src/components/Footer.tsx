@@ -21,7 +21,7 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 py-12 grid md:grid-cols-2 lg:grid-cols-4 gap-8">
         <div>
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded grid place-items-center overflow-hidden" style={{ backgroundColor: site.logoBoxColor }}>{site.logoUrl ? <img src={site.logoUrl} alt="Logo" className="w-full h-full object-cover" /> : <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>}</div>
+            {site.logoUrl ? <img src={site.logoUrl} alt="Logo" className="h-9 w-auto max-w-[150px] object-contain" /> : <div className="w-8 h-8 rounded grid place-items-center overflow-hidden" style={{ backgroundColor: site.logoBoxColor }}><svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg></div>}
             <div><span className="font-black text-lg text-white">{site.brandName}</span><span className="font-black text-lg text-red-500">{site.brandAccent}</span></div>
           </div>
           <p className="text-xs leading-relaxed mb-5">{site.footerDescription}</p>

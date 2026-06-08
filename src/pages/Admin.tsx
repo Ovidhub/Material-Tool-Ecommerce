@@ -826,12 +826,12 @@ export default function Admin() {
                       <input type="file" accept="image/*" onChange={(e) => uploadLogoImage(e.target.files?.[0] || null)} className="hidden" />
                     </label>
                   </div>
-                  {contentForm.logoUrl && <img src={contentForm.logoUrl} alt="Logo preview" className="mt-2 h-16 w-16 rounded-sm object-cover border border-neutral-200" />}
+                  {contentForm.logoUrl && <img src={contentForm.logoUrl} alt="Logo preview" className="mt-2 h-16 w-auto max-w-[220px] rounded-sm object-contain border border-neutral-200 bg-white p-1" />}
                 </div>
                 <label className="text-xs font-bold uppercase text-neutral-600">Primary Theme Color<input type="color" value={contentForm.primaryColor} onChange={(e) => setContentForm({ ...contentForm, primaryColor: e.target.value })} className="mt-1 h-10 w-full border border-neutral-300 rounded-sm" /></label>
                 <label className="text-xs font-bold uppercase text-neutral-600">Dark / Header Color<input type="color" value={contentForm.secondaryColor} onChange={(e) => setContentForm({ ...contentForm, secondaryColor: e.target.value })} className="mt-1 h-10 w-full border border-neutral-300 rounded-sm" /></label>
                 <label className="text-xs font-bold uppercase text-neutral-600">Accent Color<input type="color" value={contentForm.accentColor} onChange={(e) => setContentForm({ ...contentForm, accentColor: e.target.value })} className="mt-1 h-10 w-full border border-neutral-300 rounded-sm" /></label>
-                <label className="text-xs font-bold uppercase text-neutral-600">Logo Box Color<input type="color" value={contentForm.logoBoxColor} onChange={(e) => setContentForm({ ...contentForm, logoBoxColor: e.target.value })} className="mt-1 h-10 w-full border border-neutral-300 rounded-sm" /></label>
+                <label className="text-xs font-bold uppercase text-neutral-600">Logo Box Color <span className="normal-case font-normal text-neutral-400">(only used for the default wrench icon)</span><input type="color" value={contentForm.logoBoxColor} onChange={(e) => setContentForm({ ...contentForm, logoBoxColor: e.target.value })} className="mt-1 h-10 w-full border border-neutral-300 rounded-sm" /></label>
               </div>
             </div>
 
